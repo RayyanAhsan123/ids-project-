@@ -1,0 +1,8 @@
+streamlit>=1.32.0
+pandas>=2.1.0
+numpy>=1.26.0
+scikit-learn>=1.4.0
+openai>=1.30.0
+plotly>=5.18.0
+python-dotenv>=1.0.0
+# pyspark>=3.5.0   # Uncomment if Java 8/11/17 is installed
