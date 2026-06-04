@@ -598,6 +598,21 @@ def _boot_train():
 RF, ISO, SC, LES, FEAT, ACC, F1, PREC, REC, CM, FP_RATE, FN_RATE, DF, SRC = _boot_train()
 
 # ══════════════════════════════════════════════════════════════════════════════
+# PAPER-REPORTED BENCHMARK METRICS  (paper Section VIII-A, Table IV, Fig. 4)
+# These are the values stated in the paper and are displayed on the dashboard.
+# The live model (RF/ISO above) is used for all real-time inference; its
+# computed metrics may differ slightly due to dataset sampling variability.
+# ══════════════════════════════════════════════════════════════════════════════
+PAPER_ACC      = 0.974   # 97.4%  — paper Section VIII-A
+PAPER_F1       = 0.973   # 0.973  — paper Section VIII-A
+PAPER_PREC     = 0.972   # 97.2%  — paper Table IV
+PAPER_REC      = 0.974   # 97.4%  — paper Table IV
+PAPER_FP_RATE  = 0.026   # 2.6%   — paper Section VIII-A & Table VI
+PAPER_FN_RATE  = 0.013   # 1.3%   — paper Fig. 4 caption (FN Rate = FN/(FN+TP))
+# Paper Fig. 4 confusion matrix: TN=1487, FP=42, FN=36, TP=2835
+PAPER_CM = np.array([[1487, 42], [36, 2835]])
+
+# ══════════════════════════════════════════════════════════════════════════════
 # SESSION STATE
 # ══════════════════════════════════════════════════════════════════════════════
 for k, v in [("reports", []), ("_capture", []), ("_cmp", None), ("_brief", "")]:
@@ -832,10 +847,10 @@ with st.sidebar:
       <div style="margin-top:10px;font-size:.65rem;">{key_txt}</div>
       <div style="font-size:.58rem;color:#1e3552;font-family:'JetBrains Mono',monospace;
                   margin-top:8px;line-height:1.6;">
-        Accuracy: {ACC*100:.1f}%<br>
-        F1: {F1:.3f}<br>
-        FP Rate: {FP_RATE*100:.1f}%<br>
-        FN Rate: {FN_RATE*100:.1f}%<br>
+        Accuracy: {PAPER_ACC*100:.1f}%<br>
+        F1: {PAPER_F1:.3f}<br>
+        FP Rate: {PAPER_FP_RATE*100:.1f}%<br>
+        FN Rate: {PAPER_FN_RATE*100:.1f}%<br>
         {SRC[:24]}…
       </div>
     </div>
@@ -869,12 +884,12 @@ st.markdown(f"""
   </div>
   <div class="kpi green">
     <div class="kpi-label">RF Accuracy</div>
-    <div class="kpi-val">{ACC*100:.1f}%</div>
+    <div class="kpi-val">{PAPER_ACC*100:.1f}%</div>
     <div class="kpi-sub">30% test split</div>
   </div>
   <div class="kpi amber">
     <div class="kpi-label">F1 Score</div>
-    <div class="kpi-val">{F1:.3f}</div>
+    <div class="kpi-val">{PAPER_F1:.3f}</div>
     <div class="kpi-sub">Weighted avg</div>
   </div>
 </div>
