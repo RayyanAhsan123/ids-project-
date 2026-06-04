@@ -1,7 +1,7 @@
 """
 LLM-Powered Intrusion Detection System — Semester Project
 Category A | AI & LLM-Powered Security Systems | TIER S
-Fully functional with collapsible sidebar navigation.
+Gracefully handles missing groq package.
 """
 
 import time, warnings
@@ -15,7 +15,15 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
-from groq import Groq
+
+# ─── Safe import for Groq ─────────────────────────────────────────
+try:
+    from groq import Groq
+    GROQ_AVAILABLE = True
+except ImportError:
+    GROQ_AVAILABLE = False
+    Groq = None
+
 from sklearn.ensemble import IsolationForest, RandomForestClassifier
 from sklearn.metrics import (accuracy_score, confusion_matrix, f1_score,
                               precision_score, recall_score)
@@ -33,7 +41,7 @@ st.set_page_config(
 )
 
 # ══════════════════════════════════════════════════════════════════════════════
-# CSS (sidebar collapsible – collapse button is visible)
+# CSS (sidebar collapsible – collapse button visible)
 # ══════════════════════════════════════════════════════════════════════════════
 st.markdown("""
 <style>
@@ -61,7 +69,6 @@ html,body,[data-testid="stAppViewContainer"]{
   background:#08101e !important;
   border-right:1px solid #152035 !important;
 }
-/* Make sure collapse button is not hidden */
 [data-testid="collapsedControl"] {
   display: flex !important;
   visibility: visible !important;
@@ -226,19 +233,20 @@ hr{border-color:#1e2d45!important;}
 """, unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════════════════════════════════════
-# GROQ API KEY HANDLING
+# GROQ API KEY HANDLING (safe)
 # ══════════════════════════════════════════════════════════════════════════════
 def _get_key():
     try: return st.secrets["GROQ_API_KEY"]
     except: return ""
 
 def _groq_client():
+    if not GROQ_AVAILABLE:
+        return None
     k = _get_key()
     return Groq(api_key=k) if k and k != "gsk_your_key_here" else None
 
 def _llm_ready():
-    k = _get_key()
-    return bool(k) and k != "gsk_your_key_here"
+    return GROQ_AVAILABLE and bool(_get_key()) and _get_key() != "gsk_your_key_here"
 
 # ══════════════════════════════════════════════════════════════════════════════
 # CONSTANTS & KNOWLEDGE BASE
@@ -463,9 +471,11 @@ def _vec(row):
     return SC.transform(pd.DataFrame([tmp])[FEAT].fillna(0))
 
 # ══════════════════════════════════════════════════════════════════════════════
-# LLM FUNCTIONS
+# LLM FUNCTIONS (safe – only called if groq available)
 # ══════════════════════════════════════════════════════════════════════════════
 def llm_report(client,summary,label,kb):
+    if client is None:
+        return "[Groq package not installed. Install groq and restart.]"
     prompt=(f"You are an expert cybersecurity analyst reviewing network traffic flagged by an ML-based IDS.\n\n"
             f"=== TRAFFIC SUMMARY ===\n{summary}\n\n"
             f"=== ML CLASSIFICATION ===\n"
@@ -483,6 +493,8 @@ def llm_report(client,summary,label,kb):
     return r.choices[0].message.content.strip()
 
 def llm_soc(client,reports):
+    if client is None:
+        return "[Groq package not installed. Install groq and restart.]"
     last=reports[-5:]
     lines="\n".join(f"- {r['ts']}: {r['label']} ({r['sev'].upper()}) on {r['svc']}" for r in last)
     r=client.chat.completions.create(model="llama3-8b-8192",
@@ -493,7 +505,7 @@ def llm_soc(client,reports):
     return r.choices[0].message.content.strip()
 
 # ══════════════════════════════════════════════════════════════════════════════
-# SIDEBAR NAVIGATION (collapsible – uses radio buttons)
+# SIDEBAR NAVIGATION (collapsible)
 # ══════════════════════════════════════════════════════════════════════════════
 NAV_PAGES = [
     "📊  Dataset & Model",
@@ -520,7 +532,6 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
 
-    # Radio-based navigation – the sidebar is collapsible now
     page = st.radio(
         label="Navigation",
         options=NAV_PAGES,
@@ -531,8 +542,11 @@ with st.sidebar:
     st.markdown("<hr style='border-color:#152035;margin:14px 0;'>", unsafe_allow_html=True)
 
     key_ok=_llm_ready()
-    key_txt=('<span style="color:#4ade80;">🟢 API key ready</span>'
-             if key_ok else '<span style="color:#f87171;">🔴 Add GROQ_API_KEY</span>')
+    if not GROQ_AVAILABLE:
+        key_txt='<span style="color:#f87171;">🔴 Groq package missing → pip install groq</span>'
+    else:
+        key_txt=('<span style="color:#4ade80;">🟢 API key ready</span>'
+                 if key_ok else '<span style="color:#f87171;">🔴 Add GROQ_API_KEY</span>')
     st.markdown(f"""
     <div style="padding:0 14px 20px;">
       <div class="status-pill"><span class="dot"></span>Models Live</div>
@@ -545,7 +559,7 @@ with st.sidebar:
     """, unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════════════════════════════════════
-# HERO (always shown at top of main area)
+# HERO (always shown)
 # ══════════════════════════════════════════════════════════════════════════════
 n_atk=int((DF["label"]!="normal").sum())
 st.markdown(f"""
@@ -582,7 +596,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════════════════════════════════════
-# PAGE CONTENT (based on sidebar selection)
+# PAGE CONTENT
 # ══════════════════════════════════════════════════════════════════════════════
 
 if page == "📊  Dataset & Model":
@@ -690,42 +704,45 @@ elif page == "📡  Live Capture":
 
 elif page == "🤖  LLM Threat Reports":
     st.markdown('<p class="sec">🤖 LLM Threat Reports — Groq LLaMA-3 70B</p>', unsafe_allow_html=True)
+    if not GROQ_AVAILABLE:
+        st.error("❌ The `groq` Python package is not installed. Please run: `pip install groq` and restart the app.")
+        st.stop()
     if not _llm_ready():
         st.error("⚠️  No Groq API key found. Add `GROQ_API_KEY` in **App Settings → Secrets**.")
         st.code('GROQ_API_KEY = "gsk_xxxxxxxxxxxxxxxx"', language="toml")
-    else:
-        c1,c2 = st.columns([3,1])
-        with c1:
-            opts = ["(Random)"] + sorted(DF["label"].unique().tolist())
-            chosen = st.selectbox("Filter by attack type", opts)
-        with c2:
-            n_analyze = st.number_input("Records", 1, 5, 1)
+        st.stop()
+    c1,c2 = st.columns([3,1])
+    with c1:
+        opts = ["(Random)"] + sorted(DF["label"].unique().tolist())
+        chosen = st.selectbox("Filter by attack type", opts)
+    with c2:
+        n_analyze = st.number_input("Records", 1, 5, 1)
 
-        if st.button("🔍  Analyze & Generate Reports", use_container_width=True):
-            pool = DF if chosen=="(Random)" else DF[DF["label"]==chosen]
-            samples = pool.sample(min(int(n_analyze), len(pool)), random_state=int(time.time()))
-            client = _groq_client()
-            progress = st.progress(0, "Analyzing…")
-            for idx, (_, row) in enumerate(samples.iterrows()):
-                rd = row.to_dict()
-                true_lbl = rd.get("label","?")
-                xv = _vec(rd)
-                pred_bin = int(RF.predict(xv)[0])
-                pred_label = true_lbl if pred_bin else "normal"
-                sev = _severity(pred_label)
-                kb = _kb(pred_label)
-                with st.spinner(f"LLM report {idx+1}/{len(samples)}…"):
-                    try:
-                        rtext = llm_report(client, _tstr(rd), pred_label, kb)
-                    except Exception as e:
-                        rtext = f"[LLM error: {e}]"
-                st.session_state.reports.insert(0, dict(
-                    ts=datetime.now().strftime("%H:%M:%S"), label=pred_label, true_label=true_lbl,
-                    sev=sev, svc=rd.get("service","?"), proto=str(rd.get("protocol_type","?")),
-                    report=rtext, kb=kb))
-                progress.progress((idx+1)/len(samples))
-            progress.empty()
-            st.success(f"✅ {len(samples)} LLM report(s) generated.")
+    if st.button("🔍  Analyze & Generate Reports", use_container_width=True):
+        pool = DF if chosen=="(Random)" else DF[DF["label"]==chosen]
+        samples = pool.sample(min(int(n_analyze), len(pool)), random_state=int(time.time()))
+        client = _groq_client()
+        progress = st.progress(0, "Analyzing…")
+        for idx, (_, row) in enumerate(samples.iterrows()):
+            rd = row.to_dict()
+            true_lbl = rd.get("label","?")
+            xv = _vec(rd)
+            pred_bin = int(RF.predict(xv)[0])
+            pred_label = true_lbl if pred_bin else "normal"
+            sev = _severity(pred_label)
+            kb = _kb(pred_label)
+            with st.spinner(f"LLM report {idx+1}/{len(samples)}…"):
+                try:
+                    rtext = llm_report(client, _tstr(rd), pred_label, kb)
+                except Exception as e:
+                    rtext = f"[LLM error: {e}]"
+            st.session_state.reports.insert(0, dict(
+                ts=datetime.now().strftime("%H:%M:%S"), label=pred_label, true_label=true_lbl,
+                sev=sev, svc=rd.get("service","?"), proto=str(rd.get("protocol_type","?")),
+                report=rtext, kb=kb))
+            progress.progress((idx+1)/len(samples))
+        progress.empty()
+        st.success(f"✅ {len(samples)} LLM report(s) generated.")
 
     if st.session_state.reports:
         st.markdown('<p class="sec">Generated Reports</p>', unsafe_allow_html=True)
@@ -878,9 +895,13 @@ elif page == "🧠  RAG Knowledge Base":
 
 elif page == "📋  NLP SOC Summary":
     st.markdown('<p class="sec">📋 NLP SOC Briefing — Groq LLaMA-3 8B</p>', unsafe_allow_html=True)
+    if not GROQ_AVAILABLE:
+        st.error("❌ The `groq` package is not installed. Please run: `pip install groq` and restart.")
+        st.stop()
     if not _llm_ready():
         st.error("⚠️  Add `GROQ_API_KEY` in App Settings → Secrets.")
-    elif not st.session_state.reports:
+        st.stop()
+    if not st.session_state.reports:
         st.warning("⚠️  Generate at least one report on the **LLM Threat Reports** page first.")
     else:
         rpts = st.session_state.reports
