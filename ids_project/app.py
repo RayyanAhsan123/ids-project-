@@ -1,16 +1,15 @@
 """
 LLM-Powered Intrusion Detection System — Semester Project
 Category A | AI & LLM-Powered Security Systems | TIER S
-
-FIXED: Navigation bar now works properly ✅
+Fully functional with collapsible sidebar navigation.
 """
- 
+
 import time, warnings
 from collections import Counter
 from datetime import datetime
- 
+
 warnings.filterwarnings("ignore")
- 
+
 import numpy as np
 import pandas as pd
 import plotly.express as px
@@ -22,9 +21,9 @@ from sklearn.metrics import (accuracy_score, confusion_matrix, f1_score,
                               precision_score, recall_score)
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, StandardScaler
- 
+
 # ══════════════════════════════════════════════════════════════════════════════
-# PAGE CONFIG  ← must be FIRST streamlit call
+# PAGE CONFIG (must be first Streamlit command)
 # ══════════════════════════════════════════════════════════════════════════════
 st.set_page_config(
     page_title="LLM-IDS",
@@ -32,14 +31,14 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
- 
+
 # ══════════════════════════════════════════════════════════════════════════════
-# CSS (IMPROVED NAVIGATION)
+# CSS (sidebar collapsible – collapse button is visible)
 # ══════════════════════════════════════════════════════════════════════════════
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Outfit:wght@400;600;700;900&display=swap');
- 
+
 :root{
   --bg:#070b12;--bg2:#0d1220;--bg3:#111827;--border:#1e2d45;
   --accent:#3b82f6;--accent2:#6366f1;
@@ -47,7 +46,7 @@ st.markdown("""
   --text:#e2e8f0;--muted:#64748b;
   --mono:'JetBrains Mono',monospace;--sans:'Outfit',sans-serif;
 }
- 
+
 html,body,[data-testid="stAppViewContainer"]{
   background:var(--bg)!important;color:var(--text)!important;font-family:var(--sans)!important;
 }
@@ -56,64 +55,73 @@ html,body,[data-testid="stAppViewContainer"]{
 }
 [data-testid="stHeader"]{background:transparent!important;}
 #MainMenu,footer,header{visibility:hidden;}
- 
-/* ── SIDEBAR ── */
+
+/* ── SIDEBAR: collapsible, collapse button visible ── */
 [data-testid="stSidebar"]{
   background:#08101e !important;
   border-right:1px solid #152035 !important;
-  min-width:260px !important;
-  max-width:260px !important;
 }
-[data-testid="stSidebar"] > div:first-child{padding:0 !important;}
-[data-testid="collapsedControl"]{display:none !important;}
- 
-/* ── FIX: NAV BUTTONS (Proper Streamlit styling) ── */
-.nav-container {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 12px 0;
+/* Make sure collapse button is not hidden */
+[data-testid="collapsedControl"] {
+  display: flex !important;
+  visibility: visible !important;
+}
+[data-testid="stSidebarCollapseButton"] {
+  display: flex !important;
+  visibility: visible !important;
 }
 
-[data-testid="stSidebar"] .stButton > button {
-  width: 100% !important;
-  padding: 12px 14px !important;
-  margin: 0 !important;
-  background: transparent !important;
-  border: 1px solid transparent !important;
+/* ── SIDEBAR RADIO NAV (clean style) ── */
+[data-testid="stSidebar"] .stRadio > label {
+  display: none !important;
+}
+[data-testid="stSidebar"] .stRadio > div {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+}
+[data-testid="stSidebar"] .stRadio > div > label {
+  display: flex !important;
+  align-items: center !important;
+  padding: 10px 14px !important;
+  margin: 1px 4px !important;
   border-radius: 10px !important;
   cursor: pointer !important;
-  text-align: left !important;
+  border: 1px solid transparent !important;
+  transition: all 0.15s !important;
   font-family: 'Outfit', sans-serif !important;
   font-size: 0.87rem !important;
   font-weight: 600 !important;
   color: #4a6080 !important;
-  transition: all 0.15s ease !important;
-  box-shadow: none !important;
-  transform: none !important;
+  background: transparent !important;
 }
-
-[data-testid="stSidebar"] .stButton > button:hover {
-  background: rgba(255, 255, 255, 0.04) !important;
+[data-testid="stSidebar"] .stRadio > div > label:hover {
+  background: rgba(255,255,255,.04) !important;
   color: #9bb5d0 !important;
-  transform: none !important;
-  box-shadow: none !important;
 }
-
-/* ── ACTIVE NAV STATE (Uses data attribute) ── */
-[data-testid="stSidebar"] .stButton.nav-active > button {
-  background: linear-gradient(135deg, rgba(79, 70, 229, 0.3), rgba(99, 102, 241, 0.12)) !important;
-  border: 1px solid rgba(99, 102, 241, 0.4) !important;
+[data-testid="stSidebar"] .stRadio > div > label[data-baseweb="radio"] {
   color: #e2e8f0 !important;
-  box-shadow: 0 0 12px rgba(99, 102, 241, 0.2) !important;
+}
+/* Hide the actual radio circle */
+[data-testid="stSidebar"] .stRadio > div > label > div:first-child {
+  display: none !important;
+}
+[data-testid="stSidebar"] .stRadio > div > label > div:last-child {
+  margin-left: 0 !important;
+}
+/* Selected radio item styling */
+[data-testid="stSidebar"] .stRadio [aria-checked="true"] {
+  background: linear-gradient(135deg,rgba(79,70,229,.3),rgba(99,102,241,.12)) !important;
+  border: 1px solid rgba(99,102,241,.4) !important;
+  color: #e2e8f0 !important;
+}
+[data-testid="stSidebar"] .stRadio [aria-checked="true"] p {
+  color: #e2e8f0 !important;
+}
+[data-testid="stSidebar"] .stRadio [aria-checked="false"] p {
+  color: #4a6080 !important;
 }
 
-[data-testid="stSidebar"] .stButton.nav-active > button:hover {
-  background: linear-gradient(135deg, rgba(79, 70, 229, 0.4), rgba(99, 102, 241, 0.2)) !important;
-  transform: none !important;
-  box-shadow: 0 0 16px rgba(99, 102, 241, 0.3) !important;
-}
- 
 /* ── KPI cards ── */
 .kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px;}
 .kpi{background:#111827;border:1px solid #1e2d45;border-radius:14px;
@@ -129,12 +137,12 @@ html,body,[data-testid="stAppViewContainer"]{
 .kpi.blue .kpi-val{color:#60a5fa;}.kpi.red .kpi-val{color:#f87171;}
 .kpi.green .kpi-val{color:#4ade80;}.kpi.amber .kpi-val{color:#fbbf24;}
 .kpi-sub{font-size:.68rem;color:#64748b;margin-top:2px;font-family:'JetBrains Mono',monospace;}
- 
+
 /* ── Section heading ── */
 .sec{font-size:.68rem;font-weight:700;color:#64748b;text-transform:uppercase;
      letter-spacing:2.5px;border-left:3px solid #6366f1;padding-left:12px;
      margin:22px 0 12px;font-family:'JetBrains Mono',monospace;}
- 
+
 /* ── Hero ── */
 .hero{background:linear-gradient(135deg,#0d1e3a,#070b12);border:1px solid #1e2d45;
       border-radius:16px;padding:22px 28px;margin-bottom:22px;
@@ -148,7 +156,7 @@ html,body,[data-testid="stAppViewContainer"]{
             color:#fff;font-size:.62rem;font-weight:700;padding:5px 14px;border-radius:30px;
             letter-spacing:2px;font-family:'JetBrains Mono',monospace;white-space:nowrap;
             box-shadow:0 0 20px rgba(99,102,241,.4);}
- 
+
 /* ── Alert cards ── */
 .alert-card{background:#111827;border-radius:12px;padding:16px 20px;margin-bottom:10px;
             border-left:4px solid #ef4444;border-top:1px solid #1e2d45;
@@ -166,13 +174,13 @@ html,body,[data-testid="stAppViewContainer"]{
 .pill-medium{background:rgba(245,158,11,.15);color:#fbbf24;}
 .pill-low{background:rgba(34,197,94,.15);color:#4ade80;}
 .pill-info{background:rgba(59,130,246,.15);color:#60a5fa;}
- 
+
 /* ── Packet row ── */
 .packet-row{background:#0d1220;border:1px solid #1e2d45;border-radius:8px;
             padding:9px 14px;font-family:'JetBrains Mono',monospace;
             font-size:.71rem;color:#94a3b8;margin-bottom:5px;}
 .packet-row span{color:#60a5fa;}
- 
+
 /* ── RAG card ── */
 .rag-card{background:#111827;border:1px solid #1e2d45;border-radius:10px;
           padding:14px 18px;margin-bottom:10px;}
@@ -181,7 +189,7 @@ html,body,[data-testid="stAppViewContainer"]{
 .rag-tag{display:inline-block;background:rgba(99,102,241,.15);color:#a5b4fc;
          font-size:.6rem;padding:2px 8px;border-radius:20px;
          font-family:'JetBrains Mono',monospace;margin-right:4px;margin-top:5px;}
- 
+
 /* ── Pulse dot ── */
 .status-pill{display:inline-flex;align-items:center;gap:6px;
              background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);
@@ -189,7 +197,7 @@ html,body,[data-testid="stAppViewContainer"]{
              padding:4px 12px;border-radius:20px;}
 .dot{width:6px;height:6px;border-radius:50%;background:#4ade80;animation:blink 2s infinite;}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
- 
+
 /* ── Main content Buttons ── */
 [data-testid="stMainBlockContainer"] .stButton>button{
   background:linear-gradient(135deg,#4f46e5,#7c3aed)!important;
@@ -201,7 +209,7 @@ html,body,[data-testid="stAppViewContainer"]{
   transform:translateY(-2px)!important;
   box-shadow:0 8px 24px rgba(99,102,241,.35)!important;
 }
- 
+
 /* ── Form inputs ── */
 .stTextArea textarea,.stTextInput>div>div>input{
   background:#111827!important;border:1px solid #1e2d45!important;
@@ -215,48 +223,23 @@ html,body,[data-testid="stAppViewContainer"]{
 hr{border-color:#1e2d45!important;}
 .stAlert{border-radius:10px!important;}
 </style>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-  // Update nav active state on page load
-  updateNavActive();
-});
-
-function updateNavActive() {
-  const pageTitle = document.querySelector('[data-testid="stSidebar"]');
-  if (!pageTitle) return;
-  
-  // Get current page from session state (this will be updated by Streamlit)
-  const buttons = document.querySelectorAll('[data-testid="stSidebar"] .stButton');
-  buttons.forEach(btn => {
-    btn.classList.remove('nav-active');
-  });
-}
-
-// Observe for Streamlit reruns
-const observer = new MutationObserver(() => {
-  updateNavActive();
-});
-
-observer.observe(document.body, { childList: true, subtree: true });
-</script>
 """, unsafe_allow_html=True)
- 
+
 # ══════════════════════════════════════════════════════════════════════════════
-# GROQ
+# GROQ API KEY HANDLING
 # ══════════════════════════════════════════════════════════════════════════════
 def _get_key():
     try: return st.secrets["GROQ_API_KEY"]
     except: return ""
- 
+
 def _groq_client():
     k = _get_key()
     return Groq(api_key=k) if k and k != "gsk_your_key_here" else None
- 
+
 def _llm_ready():
     k = _get_key()
     return bool(k) and k != "gsk_your_key_here"
- 
+
 # ══════════════════════════════════════════════════════════════════════════════
 # CONSTANTS & KNOWLEDGE BASE
 # ══════════════════════════════════════════════════════════════════════════════
@@ -298,28 +281,28 @@ KB = {
         "tags":["Benign","Baseline"],
         "snort_rule":"# No rule — traffic classified as normal",},
 }
- 
+
 def _family(label):
     label = label.lower().strip().rstrip(".")
     for k,v in ATTACK_FAMILIES.items():
         if k in label: return v
     return "Unknown"
- 
+
 def _severity(label):
     f = _family(label)
     if label.strip().lower()=="normal": return "info"
     if f=="U2R": return "high"
     if f in ("R2L","Probe"): return "medium"
     return "high"
- 
+
 def _kb(label):
     label = label.lower().strip().rstrip(".")
     for k in KB:
         if k in label: return KB[k]
     return KB["normal"]
- 
+
 # ══════════════════════════════════════════════════════════════════════════════
-# DATASET
+# DATASET LOADING
 # ══════════════════════════════════════════════════════════════════════════════
 NSL_COLS = [
     "duration","protocol_type","service","flag","src_bytes","dst_bytes","land",
@@ -334,7 +317,7 @@ NSL_COLS = [
     "dst_host_rerror_rate","dst_host_srv_rerror_rate",
     "label","difficulty_level",
 ]
- 
+
 @st.cache_data(show_spinner=False)
 def load_dataset():
     for src,url in [
@@ -346,6 +329,7 @@ def load_dataset():
             df["label"] = df["label"].str.strip().str.lower()
             return df, src
         except: continue
+    # Fallback synthetic data
     np.random.seed(42); n=5000
     lp=["normal","neptune","smurf","portsweep","ipsweep","satan","nmap",
         "guess_passwd","ftp_write","buffer_overflow","rootkit","teardrop","back"]
@@ -388,7 +372,7 @@ def load_dataset():
         "label":np.random.choice(lp,n,p=lw),"difficulty_level":np.random.randint(1,21,n),
     })
     return df,"Synthetic NSL-KDD (offline fallback)"
- 
+
 # ══════════════════════════════════════════════════════════════════════════════
 # AUTO-TRAIN AT STARTUP
 # ══════════════════════════════════════════════════════════════════════════════
@@ -414,15 +398,15 @@ def _boot_train():
     rec=recall_score(yte,yp,average="weighted",zero_division=0)
     cm=confusion_matrix(yte,yp)
     return rf,iso,sc,les,feat,acc,f1,prec,rec,cm,df,src
- 
+
 RF,ISO,SC,LES,FEAT,ACC,F1,PREC,REC,CM,DF,SRC = _boot_train()
- 
+
 # ══════════════════════════════════════════════════════════════════════════════
 # SESSION STATE
 # ══════════════════════════════════════════════════════════════════════════════
-for k,v in [("reports",[]),("_capture",[]),("_cmp",None),("_brief",""),("page","📊  Dataset & Model")]:
+for k,v in [("reports",[]),("_capture",[]),("_cmp",None),("_brief","")]:
     if k not in st.session_state: st.session_state[k]=v
- 
+
 # ══════════════════════════════════════════════════════════════════════════════
 # SNORT SIMULATION
 # ══════════════════════════════════════════════════════════════════════════════
@@ -440,24 +424,24 @@ def _snort(row):
             if fn(row): return atk
         except: pass
     return "normal"
- 
+
 # ══════════════════════════════════════════════════════════════════════════════
 # HELPERS
 # ══════════════════════════════════════════════════════════════════════════════
 PLOT=dict(paper_bgcolor="rgba(0,0,0,0)",plot_bgcolor="rgba(0,0,0,0)",
           font=dict(color="#94a3b8",family="JetBrains Mono"),margin=dict(l=12,r=12,t=36,b=12))
 COLORS=["#3b82f6","#ef4444","#f59e0b","#22c55e","#a78bfa","#f472b6","#34d399"]
- 
+
 def _fake_ip():
     r=np.random.randint; return f"{r(1,255)}.{r(0,255)}.{r(0,255)}.{r(1,255)}"
- 
+
 def _sim_pkt(row):
     return dict(ts=datetime.now().strftime("%H:%M:%S.%f")[:-3],
                 src=_fake_ip(),dst="192.168.1."+str(np.random.randint(1,50)),
                 proto=str(row.get("protocol_type","tcp")).upper(),
                 svc=row.get("service","http"),flag=row.get("flag","SF"),
                 length=int(row.get("src_bytes",0))+int(row.get("dst_bytes",0)))
- 
+
 def _tstr(row):
     return (f"Protocol: {str(row.get('protocol_type','?')).upper()} | "
             f"Service: {row.get('service','?')} | Flag: {row.get('flag','?')}\n"
@@ -467,7 +451,7 @@ def _tstr(row):
             f"Root Shell: {row.get('root_shell',0)}\n"
             f"Error Rate: {float(row.get('serror_rate',0)):.2f} | Count: {row.get('count',0)} | "
             f"Dst Host Count: {row.get('dst_host_count',0)}")
- 
+
 def _vec(row):
     tmp={}
     for c in FEAT:
@@ -477,7 +461,7 @@ def _vec(row):
             except: val=0
         tmp[c]=val
     return SC.transform(pd.DataFrame([tmp])[FEAT].fillna(0))
- 
+
 # ══════════════════════════════════════════════════════════════════════════════
 # LLM FUNCTIONS
 # ══════════════════════════════════════════════════════════════════════════════
@@ -497,7 +481,7 @@ def llm_report(client,summary,label,kb):
     r=client.chat.completions.create(model="llama3-70b-8192",
         messages=[{"role":"user","content":prompt}],max_tokens=500,temperature=0.25)
     return r.choices[0].message.content.strip()
- 
+
 def llm_soc(client,reports):
     last=reports[-5:]
     lines="\n".join(f"- {r['ts']}: {r['label']} ({r['sev'].upper()}) on {r['svc']}" for r in last)
@@ -507,9 +491,9 @@ def llm_soc(client,reports):
             f"threat posture, dominant attack types, and urgent actions. Prose only.\n\n"
             f"Recent alerts:\n{lines}"}],max_tokens=200,temperature=0.3)
     return r.choices[0].message.content.strip()
- 
+
 # ══════════════════════════════════════════════════════════════════════════════
-# ══════════════  SIDEBAR NAV (FIXED) ═════════════════════════════════════════
+# SIDEBAR NAVIGATION (collapsible – uses radio buttons)
 # ══════════════════════════════════════════════════════════════════════════════
 NAV_PAGES = [
     "📊  Dataset & Model",
@@ -519,7 +503,7 @@ NAV_PAGES = [
     "🧠  RAG Knowledge Base",
     "📋  NLP SOC Summary",
 ]
- 
+
 with st.sidebar:
     st.markdown("""
     <div style="padding:22px 18px 14px;border-bottom:1px solid #152035;margin-bottom:16px;">
@@ -535,46 +519,17 @@ with st.sidebar:
       Navigation
     </div>
     """, unsafe_allow_html=True)
- 
-    # ✅ FIXED: Proper navigation with active state tracking
-    for nav_item in NAV_PAGES:
-        is_active = st.session_state.page == nav_item
-        
-        # Create button container with conditional class
-        col1, col2 = st.columns([20, 1])
-        with col1:
-            # Inject the nav-active class directly on button click
-            if st.button(
-                nav_item,
-                key=f"nav_{nav_item}",
-                use_container_width=True,
-                help=f"Go to {nav_item}"
-            ):
-                st.session_state.page = nav_item
-                st.rerun()
-        
-        # Visual indicator for active page
-        if is_active:
-            with col2:
-                st.markdown('<div style="color:#60a5fa;font-size:1.2rem;margin-top:6px;">✓</div>', unsafe_allow_html=True)
-    
-    # Add visual styling to active nav button using session state
-    st.markdown(f"""
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {{
-        const buttons = document.querySelectorAll('[data-testid="stSidebar"] .stButton button');
-        const activeText = "{st.session_state.page}";
-        buttons.forEach(btn => {{
-            if (btn.innerText.includes(activeText.split('  ')[0])) {{
-                btn.parentElement.parentElement.classList.add('nav-active');
-            }}
-        }});
-    }});
-    </script>
-    """, unsafe_allow_html=True)
- 
+
+    # Radio-based navigation – the sidebar is collapsible now
+    page = st.radio(
+        label="Navigation",
+        options=NAV_PAGES,
+        label_visibility="collapsed",
+        key="nav_radio",
+    )
+
     st.markdown("<hr style='border-color:#152035;margin:14px 0;'>", unsafe_allow_html=True)
- 
+
     key_ok=_llm_ready()
     key_txt=('<span style="color:#4ade80;">🟢 API key ready</span>'
              if key_ok else '<span style="color:#f87171;">🔴 Add GROQ_API_KEY</span>')
@@ -588,12 +543,9 @@ with st.sidebar:
       </div>
     </div>
     """, unsafe_allow_html=True)
- 
-# Read current page from session state
-page = st.session_state.page
- 
+
 # ══════════════════════════════════════════════════════════════════════════════
-# HERO (always shown)
+# HERO (always shown at top of main area)
 # ══════════════════════════════════════════════════════════════════════════════
 n_atk=int((DF["label"]!="normal").sum())
 st.markdown(f"""
@@ -628,41 +580,47 @@ st.markdown(f"""
   </div>
 </div>
 """, unsafe_allow_html=True)
- 
+
 # ══════════════════════════════════════════════════════════════════════════════
-# PAGE CONTENT
+# PAGE CONTENT (based on sidebar selection)
 # ══════════════════════════════════════════════════════════════════════════════
- 
-# ── PAGE 1 ───────────────────────────────────────────────────────────────────
-if page=="📊  Dataset & Model":
-    st.markdown('<p class="sec">📦 NSL-KDD Dataset Overview</p>',unsafe_allow_html=True)
-    c1,c2=st.columns(2)
+
+if page == "📊  Dataset & Model":
+    st.markdown('<p class="sec">📦 NSL-KDD Dataset Overview</p>', unsafe_allow_html=True)
+    c1,c2 = st.columns(2)
     with c1:
-        st.markdown('<p class="sec">Attack Family Distribution</p>',unsafe_allow_html=True)
-        fc=DF["label"].apply(_family).value_counts().reset_index(); fc.columns=["Family","Count"]
-        fig=px.bar(fc,x="Family",y="Count",color="Family",color_discrete_sequence=COLORS)
-        fig.update_layout(**PLOT,showlegend=False); fig.update_xaxes(showgrid=False)
-        fig.update_yaxes(showgrid=True,gridcolor="#1e2d45")
-        st.plotly_chart(fig,use_container_width=True)
+        st.markdown('<p class="sec">Attack Family Distribution</p>', unsafe_allow_html=True)
+        fc = DF["label"].apply(_family).value_counts().reset_index()
+        fc.columns = ["Family","Count"]
+        fig = px.bar(fc, x="Family", y="Count", color="Family", color_discrete_sequence=COLORS)
+        fig.update_layout(**PLOT, showlegend=False)
+        fig.update_xaxes(showgrid=False)
+        fig.update_yaxes(showgrid=True, gridcolor="#1e2d45")
+        st.plotly_chart(fig, use_container_width=True)
     with c2:
-        st.markdown('<p class="sec">Top 10 Attack Labels</p>',unsafe_allow_html=True)
-        top=DF["label"].value_counts().head(10).reset_index(); top.columns=["Label","Count"]
-        fig2=px.pie(top,values="Count",names="Label",color_discrete_sequence=COLORS,hole=0.45)
-        fig2.update_layout(**PLOT); st.plotly_chart(fig2,use_container_width=True)
- 
-    st.markdown('<p class="sec">Confusion Matrix — Normal vs Attack</p>',unsafe_allow_html=True)
-    fig3=go.Figure(go.Heatmap(z=CM,x=["Normal","Attack"],y=["Normal","Attack"],
-        colorscale=[[0,"#111827"],[1,"#3b82f6"]],text=CM,texttemplate="%{text}",showscale=False))
-    fig3.update_layout(**PLOT,height=280); st.plotly_chart(fig3,use_container_width=True)
- 
-    st.markdown('<p class="sec">Feature Importance (Top 15)</p>',unsafe_allow_html=True)
-    imp=pd.Series(RF.feature_importances_,index=FEAT).nlargest(15).reset_index()
-    imp.columns=["Feature","Importance"]
-    fig4=px.bar(imp,x="Importance",y="Feature",orientation="h",color="Importance",
-                color_continuous_scale=["#1e3a5f","#3b82f6","#60a5fa"])
-    fig4.update_layout(**PLOT,showlegend=False,height=380)
-    fig4.update_xaxes(showgrid=True,gridcolor="#1e2d45"); st.plotly_chart(fig4,use_container_width=True)
- 
+        st.markdown('<p class="sec">Top 10 Attack Labels</p>', unsafe_allow_html=True)
+        top = DF["label"].value_counts().head(10).reset_index()
+        top.columns = ["Label","Count"]
+        fig2 = px.pie(top, values="Count", names="Label", color_discrete_sequence=COLORS, hole=0.45)
+        fig2.update_layout(**PLOT)
+        st.plotly_chart(fig2, use_container_width=True)
+
+    st.markdown('<p class="sec">Confusion Matrix — Normal vs Attack</p>', unsafe_allow_html=True)
+    fig3 = go.Figure(go.Heatmap(z=CM, x=["Normal","Attack"], y=["Normal","Attack"],
+                                 colorscale=[[0,"#111827"],[1,"#3b82f6"]],
+                                 text=CM, texttemplate="%{text}", showscale=False))
+    fig3.update_layout(**PLOT, height=280)
+    st.plotly_chart(fig3, use_container_width=True)
+
+    st.markdown('<p class="sec">Feature Importance (Top 15)</p>', unsafe_allow_html=True)
+    imp = pd.Series(RF.feature_importances_, index=FEAT).nlargest(15).reset_index()
+    imp.columns = ["Feature","Importance"]
+    fig4 = px.bar(imp, x="Importance", y="Feature", orientation="h", color="Importance",
+                  color_continuous_scale=["#1e3a5f","#3b82f6","#60a5fa"])
+    fig4.update_layout(**PLOT, showlegend=False, height=380)
+    fig4.update_xaxes(showgrid=True, gridcolor="#1e2d45")
+    st.plotly_chart(fig4, use_container_width=True)
+
     st.markdown(f"""
     <div class="kpi-row">
       <div class="kpi blue"><div class="kpi-label">Precision</div>
@@ -673,118 +631,135 @@ if page=="📊  Dataset & Model":
         <div class="kpi-val">45</div><div class="kpi-sub">max_depth=10</div></div>
       <div class="kpi red"><div class="kpi-label">IF Trees</div>
         <div class="kpi-val">80</div><div class="kpi-sub">contam=0.22</div></div>
-    </div>""",unsafe_allow_html=True)
+    </div>""", unsafe_allow_html=True)
     with st.expander("🔍 Raw Dataset Sample (100 rows)"):
-        st.dataframe(DF.sample(min(100,len(DF)),random_state=1).reset_index(drop=True),
-                     use_container_width=True,height=300)
- 
-# ── PAGE 2 ───────────────────────────────────────────────────────────────────
-elif page=="📡  Live Capture":
-    st.markdown('<p class="sec">📡 Packet Capture Simulation</p>',unsafe_allow_html=True)
-    st.info("Simulates live packet capture. In production replace with `scapy.sniff()` or `pyshark.LiveCapture()`.",icon="ℹ️")
-    c1,c2=st.columns([3,1])
-    with c1: n_pkts=st.slider("Packets to capture",5,50,15)
-    with c2: speed=st.selectbox("Speed",["Fast","Normal","Slow"])
-    delay={"Fast":0.04,"Normal":0.18,"Slow":0.45}[speed]
- 
-    if st.button("▶️  Start Capture",use_container_width=True):
-        ph=st.empty(); captured=[]
-        rows=DF.sample(n_pkts,random_state=int(time.time())).to_dict("records")
+        st.dataframe(DF.sample(min(100,len(DF)), random_state=1).reset_index(drop=True),
+                     use_container_width=True, height=300)
+
+elif page == "📡  Live Capture":
+    st.markdown('<p class="sec">📡 Packet Capture Simulation</p>', unsafe_allow_html=True)
+    st.info("Simulates live packet capture. In production replace with `scapy.sniff()` or `pyshark.LiveCapture()`.", icon="ℹ️")
+    c1,c2 = st.columns([3,1])
+    with c1:
+        n_pkts = st.slider("Packets to capture", 5, 50, 15)
+    with c2:
+        speed = st.selectbox("Speed", ["Fast","Normal","Slow"])
+    delay = {"Fast":0.04, "Normal":0.18, "Slow":0.45}[speed]
+
+    if st.button("▶️  Start Capture", use_container_width=True):
+        ph = st.empty()
+        captured = []
+        rows = DF.sample(n_pkts, random_state=int(time.time())).to_dict("records")
         for row in rows:
-            pkt=_sim_pkt(row); xv=_vec(row)
-            pred=int(RF.predict(xv)[0]); iscs=float(ISO.decision_function(xv)[0])
-            pkt.update(pred_attack=pred,anomaly=iscs<-0.05,true_label=row.get("label","?"),iso_score=round(iscs,3))
+            pkt = _sim_pkt(row)
+            xv = _vec(row)
+            pred = int(RF.predict(xv)[0])
+            iscs = float(ISO.decision_function(xv)[0])
+            pkt.update(pred_attack=pred, anomaly=iscs<-0.05,
+                       true_label=row.get("label","?"), iso_score=round(iscs,3))
             captured.append(pkt)
-            html="".join(
+            html = "".join(
                 f'<div class="packet-row">[{p["ts"]}] <span>{p["src"]}</span>→<span>{p["dst"]}</span>'
                 f' | {p["proto"]}/{p["svc"]}/{p["flag"]} | {p["length"]:,}B'
                 f' | <span style="color:{"#f87171" if p["pred_attack"] else "#4ade80"}">{"ATTACK" if p["pred_attack"] else "NORMAL"}</span>'
                 f'{"⚠️" if p["anomaly"] else ""}</div>'
                 for p in captured[-20:])
-            ph.markdown(html,unsafe_allow_html=True); time.sleep(delay)
-        st.session_state._capture=captured
-        atks=sum(p["pred_attack"] for p in captured)
+            ph.markdown(html, unsafe_allow_html=True)
+            time.sleep(delay)
+        st.session_state._capture = captured
+        atks = sum(p["pred_attack"] for p in captured)
         st.success(f"✅ {n_pkts} packets — {atks} attack(s) detected")
- 
+
     if st.session_state._capture:
-        cap=st.session_state._capture
-        atks=sum(p["pred_attack"] for p in cap); anoms=sum(p["anomaly"] for p in cap)
+        cap = st.session_state._capture
+        atks = sum(p["pred_attack"] for p in cap)
+        anoms = sum(p["anomaly"] for p in cap)
         st.markdown(f"""<div class="kpi-row">
           <div class="kpi blue"><div class="kpi-label">Packets</div><div class="kpi-val">{len(cap)}</div></div>
           <div class="kpi red"><div class="kpi-label">RF Attacks</div><div class="kpi-val">{atks}</div></div>
           <div class="kpi amber"><div class="kpi-label">IF Anomalies</div><div class="kpi-val">{anoms}</div></div>
           <div class="kpi green"><div class="kpi-label">Normal</div><div class="kpi-val">{len(cap)-atks}</div></div>
-        </div>""",unsafe_allow_html=True)
-        fig=go.Figure()
-        fig.add_trace(go.Scatter(y=[p["iso_score"] for p in cap],mode="lines+markers",
-            line=dict(color="#3b82f6",width=2),
-            marker=dict(color=["#ef4444" if p["pred_attack"] else "#22c55e" for p in cap],size=8)))
-        fig.add_hline(y=-0.05,line_dash="dash",line_color="#f59e0b",annotation_text="Anomaly threshold")
-        fig.update_layout(**PLOT,title="Isolation Forest Score per Packet",xaxis_title="Packet #",yaxis_title="Score")
-        st.plotly_chart(fig,use_container_width=True)
- 
-# ── PAGE 3 ───────────────────────────────────────────────────────────────────
-elif page=="🤖  LLM Threat Reports":
-    st.markdown('<p class="sec">🤖 LLM Threat Reports — Groq LLaMA-3 70B</p>',unsafe_allow_html=True)
+        </div>""", unsafe_allow_html=True)
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(y=[p["iso_score"] for p in cap], mode="lines+markers",
+                                 line=dict(color="#3b82f6",width=2),
+                                 marker=dict(color=["#ef4444" if p["pred_attack"] else "#22c55e" for p in cap], size=8)))
+        fig.add_hline(y=-0.05, line_dash="dash", line_color="#f59e0b", annotation_text="Anomaly threshold")
+        fig.update_layout(**PLOT, title="Isolation Forest Score per Packet", xaxis_title="Packet #", yaxis_title="Score")
+        st.plotly_chart(fig, use_container_width=True)
+
+elif page == "🤖  LLM Threat Reports":
+    st.markdown('<p class="sec">🤖 LLM Threat Reports — Groq LLaMA-3 70B</p>', unsafe_allow_html=True)
     if not _llm_ready():
         st.error("⚠️  No Groq API key found. Add `GROQ_API_KEY` in **App Settings → Secrets**.")
-        st.code('GROQ_API_KEY = "gsk_xxxxxxxxxxxxxxxx"',language="toml")
+        st.code('GROQ_API_KEY = "gsk_xxxxxxxxxxxxxxxx"', language="toml")
     else:
-        c1,c2=st.columns([3,1])
+        c1,c2 = st.columns([3,1])
         with c1:
-            opts=["(Random)"]+sorted(DF["label"].unique().tolist())
-            chosen=st.selectbox("Filter by attack type",opts)
-        with c2: n_analyze=st.number_input("Records",1,5,1)
- 
-        if st.button("🔍  Analyze & Generate Reports",use_container_width=True):
-            pool=DF if chosen=="(Random)" else DF[DF["label"]==chosen]
-            samples=pool.sample(min(int(n_analyze),len(pool)),random_state=int(time.time()))
-            client=_groq_client(); progress=st.progress(0,"Analyzing…")
-            for idx,(_,row) in enumerate(samples.iterrows()):
-                rd=row.to_dict(); true_lbl=rd.get("label","?")
-                xv=_vec(rd); pred_bin=int(RF.predict(xv)[0])
-                pred_label=true_lbl if pred_bin else "normal"
-                sev=_severity(pred_label); kb=_kb(pred_label)
+            opts = ["(Random)"] + sorted(DF["label"].unique().tolist())
+            chosen = st.selectbox("Filter by attack type", opts)
+        with c2:
+            n_analyze = st.number_input("Records", 1, 5, 1)
+
+        if st.button("🔍  Analyze & Generate Reports", use_container_width=True):
+            pool = DF if chosen=="(Random)" else DF[DF["label"]==chosen]
+            samples = pool.sample(min(int(n_analyze), len(pool)), random_state=int(time.time()))
+            client = _groq_client()
+            progress = st.progress(0, "Analyzing…")
+            for idx, (_, row) in enumerate(samples.iterrows()):
+                rd = row.to_dict()
+                true_lbl = rd.get("label","?")
+                xv = _vec(rd)
+                pred_bin = int(RF.predict(xv)[0])
+                pred_label = true_lbl if pred_bin else "normal"
+                sev = _severity(pred_label)
+                kb = _kb(pred_label)
                 with st.spinner(f"LLM report {idx+1}/{len(samples)}…"):
-                    try: rtext=llm_report(client,_tstr(rd),pred_label,kb)
-                    except Exception as e: rtext=f"[LLM error: {e}]"
-                st.session_state.reports.insert(0,dict(
-                    ts=datetime.now().strftime("%H:%M:%S"),label=pred_label,true_label=true_lbl,
-                    sev=sev,svc=rd.get("service","?"),proto=str(rd.get("protocol_type","?")),
-                    report=rtext,kb=kb))
+                    try:
+                        rtext = llm_report(client, _tstr(rd), pred_label, kb)
+                    except Exception as e:
+                        rtext = f"[LLM error: {e}]"
+                st.session_state.reports.insert(0, dict(
+                    ts=datetime.now().strftime("%H:%M:%S"), label=pred_label, true_label=true_lbl,
+                    sev=sev, svc=rd.get("service","?"), proto=str(rd.get("protocol_type","?")),
+                    report=rtext, kb=kb))
                 progress.progress((idx+1)/len(samples))
-            progress.empty(); st.success(f"✅ {len(samples)} LLM report(s) generated.")
- 
+            progress.empty()
+            st.success(f"✅ {len(samples)} LLM report(s) generated.")
+
     if st.session_state.reports:
-        st.markdown('<p class="sec">Generated Reports</p>',unsafe_allow_html=True)
+        st.markdown('<p class="sec">Generated Reports</p>', unsafe_allow_html=True)
         for r in st.session_state.reports[:20]:
-            sc_cls={"high":"","medium":"medium","low":"low","info":"info"}[r["sev"]]
+            sc_cls = {"high":"", "medium":"medium", "low":"low", "info":"info"}[r["sev"]]
             st.markdown(f"""
             <div class="alert-card {sc_cls}">
               <div class="alert-meta">🕐 {r['ts']} | {r['proto'].upper()}/{r['svc']} | True: <b>{r['true_label']}</b></div>
               <div class="alert-title">{r['kb']['title']}<span class="pill pill-{r['sev']}">{r['sev'].upper()}</span></div>
               <div class="alert-body">{r['report'].replace(chr(10),'<br>')}</div>
-            </div>""",unsafe_allow_html=True)
+            </div>""", unsafe_allow_html=True)
         if st.button("🗑️  Clear Reports"):
-            st.session_state.reports=[]; st.rerun()
- 
-# ── PAGE 4 ───────────────────────────────────────────────────────────────────
-elif page=="📈  IDS Comparison":
-    st.markdown('<p class="sec">📈 ML-IDS vs Traditional Signature IDS — Snort / Suricata</p>',unsafe_allow_html=True)
-    n_s=st.slider("Comparison sample size",100,1000,500,step=100)
- 
-    if st.button("▶️  Run Comparison",use_container_width=True):
-        rows=DF.sample(n_s,random_state=42).to_dict("records")
-        ml_p,sn_p,true_b=[],[],[]
-        prog=st.progress(0,"Evaluating…")
-        for i,row in enumerate(rows):
-            tb=0 if row.get("label","normal").strip().lower()=="normal" else 1
-            xv=_vec(row); ml_p.append(int(RF.predict(xv)[0]))
-            sn_p.append(0 if _snort(row)=="normal" else 1); true_b.append(tb)
-            if i%50==0: prog.progress((i+1)/len(rows))
+            st.session_state.reports = []
+            st.rerun()
+
+elif page == "📈  IDS Comparison":
+    st.markdown('<p class="sec">📈 ML-IDS vs Traditional Signature IDS — Snort / Suricata</p>', unsafe_allow_html=True)
+    n_s = st.slider("Comparison sample size", 100, 1000, 500, step=100)
+
+    if st.button("▶️  Run Comparison", use_container_width=True):
+        rows = DF.sample(n_s, random_state=42).to_dict("records")
+        ml_p, sn_p, true_b = [], [], []
+        prog = st.progress(0, "Evaluating…")
+        for i, row in enumerate(rows):
+            tb = 0 if row.get("label","normal").strip().lower()=="normal" else 1
+            xv = _vec(row)
+            ml_p.append(int(RF.predict(xv)[0]))
+            sn_p.append(0 if _snort(row)=="normal" else 1)
+            true_b.append(tb)
+            if i%50==0:
+                prog.progress((i+1)/len(rows))
         prog.empty()
-        st.session_state._cmp=dict(
-            ml_acc=accuracy_score(true_b,ml_p),sn_acc=accuracy_score(true_b,sn_p),
+        st.session_state._cmp = dict(
+            ml_acc=accuracy_score(true_b,ml_p), sn_acc=accuracy_score(true_b,sn_p),
             ml_f1=f1_score(true_b,ml_p,average="weighted",zero_division=0),
             sn_f1=f1_score(true_b,sn_p,average="weighted",zero_division=0),
             ml_prec=precision_score(true_b,ml_p,average="weighted",zero_division=0),
@@ -794,11 +769,11 @@ elif page=="📈  IDS Comparison":
             ml_fp=sum(1 for m,t in zip(ml_p,true_b) if m==1 and t==0),
             sn_fp=sum(1 for m,t in zip(sn_p,true_b) if m==1 and t==0),
             ml_fn=sum(1 for m,t in zip(ml_p,true_b) if m==0 and t==1),
-            sn_fn=sum(1 for m,t in zip(sn_p,true_b) if m==0 and t==1),n=n_s)
+            sn_fn=sum(1 for m,t in zip(sn_p,true_b) if m==0 and t==1), n=n_s)
         st.success(f"✅ Compared {n_s} samples.")
- 
+
     if st.session_state._cmp:
-        c=st.session_state._cmp
+        c = st.session_state._cmp
         st.markdown(f"""<div class="kpi-row">
           <div class="kpi blue"><div class="kpi-label">ML Accuracy</div>
             <div class="kpi-val">{c['ml_acc']*100:.1f}%</div><div class="kpi-sub">Random Forest</div></div>
@@ -808,62 +783,67 @@ elif page=="📈  IDS Comparison":
             <div class="kpi-val">{c['ml_f1']:.3f}</div><div class="kpi-sub">Weighted</div></div>
           <div class="kpi red"><div class="kpi-label">Snort F1</div>
             <div class="kpi-val">{c['sn_f1']:.3f}</div><div class="kpi-sub">Weighted</div></div>
-        </div>""",unsafe_allow_html=True)
- 
-        metrics=["Accuracy (%)","F1 Score (%)","Precision (%)","Recall (%)"]
-        ml_vals=[c["ml_acc"]*100,c["ml_f1"]*100,c["ml_prec"]*100,c["ml_rec"]*100]
-        sn_vals=[c["sn_acc"]*100,c["sn_f1"]*100,c["sn_prec"]*100,c["sn_rec"]*100]
-        fig=go.Figure()
-        fig.add_trace(go.Bar(name="Random Forest (ML-IDS)",x=metrics,y=ml_vals,marker_color="#3b82f6",
-                             text=[f"{v:.1f}%" for v in ml_vals],textposition="outside"))
-        fig.add_trace(go.Bar(name="Snort Signatures",x=metrics,y=sn_vals,marker_color="#f59e0b",
-                             text=[f"{v:.1f}%" for v in sn_vals],textposition="outside"))
-        fig.update_layout(**PLOT,barmode="group",yaxis_range=[0,118],
+        </div>""", unsafe_allow_html=True)
+
+        metrics = ["Accuracy (%)","F1 Score (%)","Precision (%)","Recall (%)"]
+        ml_vals = [c["ml_acc"]*100, c["ml_f1"]*100, c["ml_prec"]*100, c["ml_rec"]*100]
+        sn_vals = [c["sn_acc"]*100, c["sn_f1"]*100, c["sn_prec"]*100, c["sn_rec"]*100]
+        fig = go.Figure()
+        fig.add_trace(go.Bar(name="Random Forest (ML-IDS)", x=metrics, y=ml_vals, marker_color="#3b82f6",
+                             text=[f"{v:.1f}%" for v in ml_vals], textposition="outside"))
+        fig.add_trace(go.Bar(name="Snort Signatures", x=metrics, y=sn_vals, marker_color="#f59e0b",
+                             text=[f"{v:.1f}%" for v in sn_vals], textposition="outside"))
+        fig.update_layout(**PLOT, barmode="group", yaxis_range=[0,118],
                           title=f"ML-IDS vs Signature IDS — {c['n']} samples")
-        fig.update_yaxes(showgrid=True,gridcolor="#1e2d45"); st.plotly_chart(fig,use_container_width=True)
- 
-        fig2=go.Figure()
-        fig2.add_trace(go.Bar(name="False Positives",x=["ML-IDS","Snort"],
-                              y=[c["ml_fp"],c["sn_fp"]],marker_color=["#3b82f6","#f59e0b"]))
-        fig2.add_trace(go.Bar(name="False Negatives",x=["ML-IDS","Snort"],
-                              y=[c["ml_fn"],c["sn_fn"]],marker_color=["#ef4444","#f87171"]))
-        fig2.update_layout(**PLOT,barmode="group",title="Error Analysis: FP & FN")
-        fig2.update_yaxes(showgrid=True,gridcolor="#1e2d45"); st.plotly_chart(fig2,use_container_width=True)
- 
-        r1,r2=st.columns(2)
-        with r1: st.markdown(f"""<div class="rag-card"><div class="rag-title">🤖 Random Forest (ML-IDS)</div>
-          <div class="rag-body">Acc: <b>{c['ml_acc']*100:.1f}%</b> | F1: <b>{c['ml_f1']*100:.1f}%</b><br>
-          FP: <b>{c['ml_fp']}</b> | FN: <b>{c['ml_fn']}</b><br><br>
-          Learns statistical patterns from 41 NSL-KDD features. Detects novel zero-day attacks.</div></div>""",unsafe_allow_html=True)
-        with r2: st.markdown(f"""<div class="rag-card"><div class="rag-title">🔏 Snort / Suricata (Signature IDS)</div>
-          <div class="rag-body">Acc: <b>{c['sn_acc']*100:.1f}%</b> | F1: <b>{c['sn_f1']*100:.1f}%</b><br>
-          FP: <b>{c['sn_fp']}</b> | FN: <b>{c['sn_fn']}</b><br><br>
-          Rule-based, fast, reliable on known CVEs. Blind to zero-day and polymorphic attacks.</div></div>""",unsafe_allow_html=True)
- 
-        sc=max(c["n"]/100,1)
-        cats=["Accuracy","F1 Score","Low FP","Low FN","Novel Attacks","Speed"]
-        ml_r=[c["ml_acc"]*100,c["ml_f1"]*100,max(0,100-c["ml_fp"]/sc*8),max(0,100-c["ml_fn"]/sc*8),83,52]
-        sn_r=[c["sn_acc"]*100,c["sn_f1"]*100,max(0,100-c["sn_fp"]/sc*8),max(0,100-c["sn_fn"]/sc*8),17,96]
-        fig3=go.Figure()
-        fig3.add_trace(go.Scatterpolar(r=ml_r,theta=cats,fill='toself',name="ML-IDS",line_color="#3b82f6"))
-        fig3.add_trace(go.Scatterpolar(r=sn_r,theta=cats,fill='toself',name="Snort",line_color="#f59e0b"))
-        fig3.update_layout(**PLOT,polar=dict(bgcolor="#0d1220",
-            radialaxis=dict(visible=True,range=[0,100],color="#1e2d45"),angularaxis=dict(color="#64748b")),
+        fig.update_yaxes(showgrid=True, gridcolor="#1e2d45")
+        st.plotly_chart(fig, use_container_width=True)
+
+        fig2 = go.Figure()
+        fig2.add_trace(go.Bar(name="False Positives", x=["ML-IDS","Snort"],
+                              y=[c["ml_fp"],c["sn_fp"]], marker_color=["#3b82f6","#f59e0b"]))
+        fig2.add_trace(go.Bar(name="False Negatives", x=["ML-IDS","Snort"],
+                              y=[c["ml_fn"],c["sn_fn"]], marker_color=["#ef4444","#f87171"]))
+        fig2.update_layout(**PLOT, barmode="group", title="Error Analysis: FP & FN")
+        fig2.update_yaxes(showgrid=True, gridcolor="#1e2d45")
+        st.plotly_chart(fig2, use_container_width=True)
+
+        r1, r2 = st.columns(2)
+        with r1:
+            st.markdown(f"""<div class="rag-card"><div class="rag-title">🤖 Random Forest (ML-IDS)</div>
+              <div class="rag-body">Acc: <b>{c['ml_acc']*100:.1f}%</b> | F1: <b>{c['ml_f1']*100:.1f}%</b><br>
+              FP: <b>{c['ml_fp']}</b> | FN: <b>{c['ml_fn']}</b><br><br>
+              Learns statistical patterns from 41 NSL-KDD features. Detects novel zero-day attacks.</div></div>""", unsafe_allow_html=True)
+        with r2:
+            st.markdown(f"""<div class="rag-card"><div class="rag-title">🔏 Snort / Suricata (Signature IDS)</div>
+              <div class="rag-body">Acc: <b>{c['sn_acc']*100:.1f}%</b> | F1: <b>{c['sn_f1']*100:.1f}%</b><br>
+              FP: <b>{c['sn_fp']}</b> | FN: <b>{c['sn_fn']}</b><br><br>
+              Rule-based, fast, reliable on known CVEs. Blind to zero-day and polymorphic attacks.</div></div>""", unsafe_allow_html=True)
+
+        sc = max(c["n"]/100, 1)
+        cats = ["Accuracy","F1 Score","Low FP","Low FN","Novel Attacks","Speed"]
+        ml_r = [c["ml_acc"]*100, c["ml_f1"]*100, max(0,100-c["ml_fp"]/sc*8), max(0,100-c["ml_fn"]/sc*8), 83, 52]
+        sn_r = [c["sn_acc"]*100, c["sn_f1"]*100, max(0,100-c["sn_fp"]/sc*8), max(0,100-c["sn_fn"]/sc*8), 17, 96]
+        fig3 = go.Figure()
+        fig3.add_trace(go.Scatterpolar(r=ml_r, theta=cats, fill='toself', name="ML-IDS", line_color="#3b82f6"))
+        fig3.add_trace(go.Scatterpolar(r=sn_r, theta=cats, fill='toself', name="Snort", line_color="#f59e0b"))
+        fig3.update_layout(**PLOT, polar=dict(bgcolor="#0d1220",
+            radialaxis=dict(visible=True, range=[0,100], color="#1e2d45"),
+            angularaxis=dict(color="#64748b")),
             title="Capability Radar")
-        st.plotly_chart(fig3,use_container_width=True)
- 
-# ── PAGE 5 ───────────────────────────────────────────────────────────────────
-elif page=="🧠  RAG Knowledge Base":
-    st.markdown('<p class="sec">🧠 RAG-Based Threat Knowledge Base</p>',unsafe_allow_html=True)
-    st.info("KB entries are injected as context when the LLM generates reports, grounding responses in known attack signatures.",icon="ℹ️")
-    q=st.text_input("🔍 Search",placeholder="e.g. DoS, buffer, brute")
-    entries=[(k,v) for k,v in KB.items() if k!="normal"]
+        st.plotly_chart(fig3, use_container_width=True)
+
+elif page == "🧠  RAG Knowledge Base":
+    st.markdown('<p class="sec">🧠 RAG-Based Threat Knowledge Base</p>', unsafe_allow_html=True)
+    st.info("KB entries are injected as context when the LLM generates reports, grounding responses in known attack signatures.", icon="ℹ️")
+    q = st.text_input("🔍 Search", placeholder="e.g. DoS, buffer, brute")
+    entries = [(k,v) for k,v in KB.items() if k!="normal"]
     if q.strip():
-        ql=q.lower()
-        entries=[(k,v) for k,v in entries if ql in k or ql in v["title"].lower() or ql in v["body"].lower()]
-    for key,entry in entries:
-        fam=_family(key); sev=_severity(key)
-        tags="".join(f'<span class="rag-tag">{t}</span>' for t in entry["tags"])
+        ql = q.lower()
+        entries = [(k,v) for k,v in entries if ql in k or ql in v["title"].lower() or ql in v["body"].lower()]
+    for key, entry in entries:
+        fam = _family(key)
+        sev = _severity(key)
+        tags = "".join(f'<span class="rag-tag">{t}</span>' for t in entry["tags"])
         st.markdown(f"""<div class="rag-card">
           <div class="rag-title">{entry['title']}
             <span class="pill pill-{sev}">{sev.upper()}</span>
@@ -875,63 +855,72 @@ elif page=="🧠  RAG Knowledge Base":
                          border-radius:6px;display:block;margin-top:4px;border:1px solid #1e2d45;">
               {entry['snort_rule']}</code></div>
           <div style="margin-top:8px;">{tags}</div>
-        </div>""",unsafe_allow_html=True)
-    st.divider(); st.markdown("**➕ Add custom KB entry**")
-    c1,c2=st.columns(2)
-    with c1: nk=st.text_input("Key"); nt=st.text_input("Title")
-    with c2: nb=st.text_area("Description",height=90); ng=st.text_input("Tags (comma-separated)")
-    ns=st.text_input("Snort rule (optional)")
+        </div>""", unsafe_allow_html=True)
+    st.divider()
+    st.markdown("**➕ Add custom KB entry**")
+    c1, c2 = st.columns(2)
+    with c1:
+        nk = st.text_input("Key")
+        nt = st.text_input("Title")
+    with c2:
+        nb = st.text_area("Description", height=90)
+        ng = st.text_input("Tags (comma-separated)")
+    ns = st.text_input("Snort rule (optional)")
     if st.button("Add to Knowledge Base"):
         if nk and nt and nb:
-            KB[nk.strip().lower()]={"title":nt,"body":nb,
-                "tags":[t.strip() for t in ng.split(",") if t.strip()],
-                "snort_rule":ns or "# No rule defined"}
-            st.success(f"Added `{nk}`!"); st.rerun()
-        else: st.error("Key, Title, and Description required.")
- 
-# ── PAGE 6 ───────────────────────────────────────────────────────────────────
-elif page=="📋  NLP SOC Summary":
-    st.markdown('<p class="sec">📋 NLP SOC Briefing — Groq LLaMA-3 8B</p>',unsafe_allow_html=True)
+            KB[nk.strip().lower()] = {"title": nt, "body": nb,
+                "tags": [t.strip() for t in ng.split(",") if t.strip()],
+                "snort_rule": ns or "# No rule defined"}
+            st.success(f"Added `{nk}`!")
+            st.rerun()
+        else:
+            st.error("Key, Title, and Description required.")
+
+elif page == "📋  NLP SOC Summary":
+    st.markdown('<p class="sec">📋 NLP SOC Briefing — Groq LLaMA-3 8B</p>', unsafe_allow_html=True)
     if not _llm_ready():
         st.error("⚠️  Add `GROQ_API_KEY` in App Settings → Secrets.")
     elif not st.session_state.reports:
         st.warning("⚠️  Generate at least one report on the **LLM Threat Reports** page first.")
     else:
-        rpts=st.session_state.reports
+        rpts = st.session_state.reports
         st.markdown(f"**{len(rpts)} alert(s) in queue.** Briefing covers last 5.")
-        if st.button("📝  Generate SOC Briefing",use_container_width=True):
+        if st.button("📝  Generate SOC Briefing", use_container_width=True):
             with st.spinner("Writing briefing…"):
-                try: brief=llm_soc(_groq_client(),rpts); st.session_state._brief=brief
-                except Exception as e: st.session_state._brief=f"[Error: {e}]"
+                try:
+                    brief = llm_soc(_groq_client(), rpts)
+                    st.session_state._brief = brief
+                except Exception as e:
+                    st.session_state._brief = f"[Error: {e}]"
         if st.session_state._brief:
             st.markdown(f"""<div class="alert-card info">
               <div class="alert-meta">🕐 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} | Groq LLaMA-3 8B | SOC Briefing</div>
               <div class="alert-title">SOC Threat Summary <span class="pill pill-info">NLP</span></div>
               <div class="alert-body" style="font-size:.9rem;line-height:1.75;">
                 {st.session_state._brief.replace(chr(10),'<br>')}
-              </div></div>""",unsafe_allow_html=True)
-        col_map={"high":"#ef4444","medium":"#f59e0b","low":"#22c55e","info":"#3b82f6"}
-        st.markdown('<p class="sec">Alert Timeline</p>',unsafe_allow_html=True)
+              </div></div>""", unsafe_allow_html=True)
+        col_map = {"high":"#ef4444","medium":"#f59e0b","low":"#22c55e","info":"#3b82f6"}
+        st.markdown('<p class="sec">Alert Timeline</p>', unsafe_allow_html=True)
         for r in rpts[:15]:
-            sc_cls={"high":"","medium":"medium","low":"low","info":"info"}[r["sev"]]
+            sc_cls = {"high":"", "medium":"medium", "low":"low", "info":"info"}[r["sev"]]
             st.markdown(f"""<div class="alert-card {sc_cls}" style="padding:12px 18px;">
               <div class="alert-meta">🕐 {r['ts']} | {r['proto'].upper()}/{r['svc']}</div>
               <div class="alert-title" style="font-size:.86rem;">{r['kb']['title']}
                 <span class="pill pill-{r['sev']}">{r['sev'].upper()}</span></div>
-            </div>""",unsafe_allow_html=True)
-        sev_counts=Counter(r["sev"] for r in rpts)
-        fig=go.Figure(go.Pie(labels=list(sev_counts.keys()),values=list(sev_counts.values()),hole=0.5,
+            </div>""", unsafe_allow_html=True)
+        sev_counts = Counter(r["sev"] for r in rpts)
+        fig = go.Figure(go.Pie(labels=list(sev_counts.keys()), values=list(sev_counts.values()), hole=0.5,
             marker_colors=[col_map.get(s,"#64748b") for s in sev_counts.keys()]))
-        fig.update_layout(**PLOT,title="Alert Severity Distribution",height=280)
-        st.plotly_chart(fig,use_container_width=True)
- 
+        fig.update_layout(**PLOT, title="Alert Severity Distribution", height=280)
+        st.plotly_chart(fig, use_container_width=True)
+
 # ══════════════════════════════════════════════════════════════════════════════
 # FOOTER
 # ══════════════════════════════════════════════════════════════════════════════
 st.divider()
-total=len(st.session_state.reports)
-hi=sum(1 for r in st.session_state.reports if r["sev"]=="high")
-med=sum(1 for r in st.session_state.reports if r["sev"]=="medium")
+total = len(st.session_state.reports)
+hi = sum(1 for r in st.session_state.reports if r["sev"]=="high")
+med = sum(1 for r in st.session_state.reports if r["sev"]=="medium")
 st.markdown(f"""<div class="kpi-row" style="margin-top:6px;">
   <div class="kpi blue"><div class="kpi-label">Model Status</div>
     <div class="kpi-val" style="font-size:1rem;">✅ Live</div><div class="kpi-sub">RF + Isolation Forest</div></div>
@@ -941,4 +930,4 @@ st.markdown(f"""<div class="kpi-row" style="margin-top:6px;">
     <div class="kpi-val">{med}</div><div class="kpi-sub">Probe / R2L</div></div>
   <div class="kpi green"><div class="kpi-label">Total Reports</div>
     <div class="kpi-val">{total}</div><div class="kpi-sub">LLM-generated</div></div>
-</div>""",unsafe_allow_html=True)
+</div>""", unsafe_allow_html=True)
