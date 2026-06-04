@@ -6,3 +6,4 @@ openai>=1.30.0
 plotly>=5.18.0
 python-dotenv>=1.0.0
 # pyspark>=3.5.0   # Uncomment if Java 8/11/17 is installed
+groq>=0.9.0
